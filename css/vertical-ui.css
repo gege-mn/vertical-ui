@@ -1,0 +1,61 @@
+/* In a layer, so any of the page's own styles win, including layered ones such as
+   Tailwind utilities that are declared after it. */
+@layer vui {
+  :root {
+    --vui-font-mongolian: sans-serif;
+    /* Spine offset from the middle of a column, toward the right. Set by applySpine(). */
+    --vui-spine: 0em;
+    /* Line-height is the gap between columns in vertical text, not leading. */
+    --vui-column-gap: 1.8;
+  }
+
+  .vui-mongolian,
+  vui-text {
+    writing-mode: vertical-lr;
+    /* On an rtl page, an inherited direction would run the columns bottom to top. */
+    direction: ltr;
+    unicode-bidi: isolate;
+    /* Never `upright` on bichig itself: it stands every letter up and breaks the joins. */
+    text-orientation: mixed;
+    font-family: var(--vui-font-mongolian);
+    /* No bichig font in common use has a bold; synthesized bold smears the joins. */
+    font-weight: 400;
+    font-synthesis: none;
+    line-height: var(--vui-column-gap);
+  }
+
+  /* One em box for 1–2 characters. Beyond that the run is squeezed unreadably small. */
+  .vui-combine {
+    text-combine-upright: all;
+  }
+
+  .vui-upright {
+    text-orientation: upright;
+  }
+
+  .vui-horizontal {
+    writing-mode: horizontal-tb;
+    display: inline-block;
+  }
+
+  /* For icons, bullets and badges centred beside or in line with a column. */
+  .vui-on-spine {
+    translate: var(--vui-spine) 0;
+  }
+
+  /* For text centred inside a box (a button, pill, tab, rail item): moves the
+   column so its spine, not its line box, sits in the box's middle. Plain
+   inline elements ignore translate; a vertical span in horizontal text is
+   already laid out as an inline-block, so it works there. */
+  .vui-spine-centered {
+    translate: calc(-1 * var(--vui-spine)) 0;
+  }
+
+  vui-scroller,
+  .vui-scroller {
+    display: flex;
+    overflow: auto hidden;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+  }
+}

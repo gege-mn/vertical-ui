@@ -1,0 +1,82 @@
+{
+  "name": "@gege-mn/vertical-ui",
+  "version": "0.1.0",
+  "description": "A spec, CSS and web components for vertical-text user interfaces, starting with traditional Mongolian script (Mongol bichig): spine alignment, upright and sideways runs, column sizing and sideways scrolling.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gege-mn/vertical-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gege-mn/vertical-ui/issues"
+  },
+  "homepage": "https://github.com/gege-mn/vertical-ui#readme",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./elements": {
+      "types": "./dist/elements.d.ts",
+      "import": "./dist/elements.js"
+    },
+    "./define": {
+      "types": "./dist/define.d.ts",
+      "import": "./dist/define.js"
+    },
+    "./debug": {
+      "types": "./dist/debug.d.ts",
+      "import": "./dist/debug.js"
+    },
+    "./vertical-ui.css": "./css/vertical-ui.css"
+  },
+  "files": [
+    "dist",
+    "src",
+    "css",
+    "spec",
+    "skills",
+    "llms.txt",
+    "CHANGELOG.md",
+    "ROADMAP.md"
+  ],
+  "sideEffects": [
+    "./dist/define.js",
+    "./dist/elements.js",
+    "./dist/elements/*.js",
+    "*.css"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "lock": "bunx pnpm@10 install --lockfile-only",
+    "tune": "bun tools/spine-tuner/serve.ts",
+    "try-in": "bun scripts/try-in.ts",
+    "prepublishOnly": "tsc -p tsconfig.build.json && tsc -p tsconfig.json && vitest run"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mongolian",
+    "mongol-bichig",
+    "cjk",
+    "vertical-text",
+    "writing-mode",
+    "web-components",
+    "css"
+  ],
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.1",
+    "@types/node": "^26.1.1",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

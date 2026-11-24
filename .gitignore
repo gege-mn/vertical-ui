@@ -1,0 +1,9 @@
+node_modules
+dist
+bun.lock
+.DS_Store
+tools/spine-tuner/sources.local.txt
+__pycache__/
+*.pyc
+# Measured offsets name third-party fonts; the spine is measured at run time instead.
+data/

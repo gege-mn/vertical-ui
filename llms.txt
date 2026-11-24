@@ -1,0 +1,22 @@
+# vertical-ui
+
+> A spec, CSS and web components for user interfaces in vertical text on the web, starting with traditional Mongolian script (Mongol bichig).
+
+## Spec
+
+- [Spec index and rule levels](spec/README.md)
+- [Terms](spec/terms.md): spine, column, line axis, block axis, run
+- [Page model](spec/page-model.md): vertical-lr, horizontal canvas
+- [Spine](spec/spine.md): aligning icons and controls to the text's stem
+- [Orientation](spec/orientation.md): Latin, digits, CJK, emoji, punctuation
+- [Columns](spec/columns.md): sizing, clipping, silent overflow
+- [Logical directions](spec/logical-directions.md): what margins and alignment mean in vertical-lr
+- [Shaping-safe styling](spec/shaping-safe-styling.md): highlights, links, fades
+- [Fonts](spec/fonts.md): coverage, weight, vertical metrics
+- [Scrolling](spec/scrolling.md): wheel and keys on a horizontal canvas
+- [Small screens](spec/small-screens.md): dvh, safe areas, landscape
+
+## Package
+
+- [README](README.md): install and exports
+- [Roadmap](ROADMAP.md)

@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spine tuner</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #fff; --ink: #1d1d1f; --muted: #6e6e73; --line: #e2e0db;
+    --center: #e5383b; --formula: #2f6fdf; --ok: #2a9d5c; --skip: #b0aca4; --odd: #d9822b;
+    --fs: 120px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+  header {
+    position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;
+    padding: 12px 16px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 15px; margin: 0; }
+  header label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
+  header input[type=text], header input[type=search] { width: 180px; }
+  #status { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 12px; color: var(--muted); font-size: 12px; }
+  .legend i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 4px; }
+  main { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 16px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+    display: flex; flex-direction: column; gap: 8px; outline: none;
+  }
+  .card:focus-within, .card:focus { border-color: var(--ink); }
+  .card[data-status=ok] { border-left: 5px solid var(--ok); }
+  .card[data-status=skip] { opacity: .5; border-left: 5px solid var(--skip); }
+  .card[data-status=odd] { border-left: 5px solid var(--odd); }
+  .card[data-status=auto] { border-left: 5px solid var(--formula); }
+  .name { font-weight: 600; overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .warn { color: var(--odd); font-size: 12px; }
+  .stage {
+    position: relative; height: calc(var(--fs) * 3.4); overflow: hidden; border-radius: 6px;
+    background: repeating-linear-gradient(90deg, transparent 0 9px, #00000008 9px 10px);
+    display: flex; justify-content: center; align-items: flex-start; padding-top: 10px;
+  }
+  .stage .center, .stage .formula { position: absolute; top: 0; bottom: 0; width: 0; pointer-events: none; }
+  .stage .center { left: 50%; border-left: 1px solid var(--center); }
+  .stage .formula { border-left: 1px dashed var(--formula); }
+  .col {
+    writing-mode: vertical-lr; text-orientation: mixed; font-size: var(--fs); line-height: 1.5;
+    font-weight: 400; font-synthesis: none; white-space: nowrap; translate: calc(var(--s) * -1em) 0;
+  }
+  .preview {
+    display: flex; gap: 16px; align-items: flex-start; justify-content: center; padding: 6px 0;
+    border-top: 1px solid var(--line);
+  }
+  .chip { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .chip .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); translate: calc(var(--s) * 32px) 0; }
+  .chip .word { writing-mode: vertical-lr; font-size: 32px; line-height: 1.5; white-space: nowrap; }
+  .chip.big .dot { translate: calc(var(--s) * 56px) 0; }
+  .chip.big .word { font-size: 56px; }
+  .controls { display: grid; grid-template-columns: 1fr 84px; gap: 6px; align-items: center; }
+  .controls input[type=number] { width: 100%; font-variant-numeric: tabular-nums; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { font: inherit; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  button[aria-pressed=true] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .hint { color: var(--muted); font-size: 12px; padding: 0 16px 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Spine tuner</h1>
+  <label>Size <input id="size" type="range" min="48" max="220" value="120"></label>
+  <label>Text <input id="sample" type="text" placeholder="default sample"></label>
+  <label>Find <input id="find" type="search"></label>
+  <label>Show
+    <select id="show">
+      <option value="all">all</option>
+      <option value="todo">not done</option>
+      <option value="auto">auto-measured</option>
+      <option value="follows">follows another</option>
+      <option value="ok">ok</option>
+      <option value="odd">odd</option>
+      <option value="skip">skipped</option>
+    </select>
+  </label>
+  <button id="copy" type="button">Copy JSON</button>
+  <span class="legend"><span><i style="background:var(--center)"></i>centre</span><span><i style="border-top:2px dashed var(--formula)"></i>formula's spine</span></span>
+  <span id="status">loading…</span>
+</header>
+<p class="hint">Slide until the stem sits on the red line, then press <b>ok</b>. Keys on a focused card: ←/→ nudge 0.002em (Shift ×5), <b>Enter</b> ok, <b>F</b> take formula, <b>S</b> skip. Saved automatically to <code>data/spine-offsets.json</code>.</p>
+<main id="grid"></main>
+<script type="module">
+  // Built from code points so no invisible character is ever typed into this file.
+  const cp = (...xs) => String.fromCodePoint(...xs);
+  const NIRUGU = cp(0x180a);
+  const MONGOL = cp(0x182e, 0x1823, 0x1829, 0x182d, 0x1823, 0x182f);
+  const BICHIG = cp(0x182a, 0x1822, 0x1834, 0x1822, 0x182d);
+  const SAIN = cp(0x1830, 0x1820, 0x1822, 0x1828);
+  const DEFAULT_SAMPLE = `${MONGOL} ${BICHIG} ${NIRUGU.repeat(3)} ${SAIN}`;
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const grid = $('#grid');
+  const { fonts, saved } = await (await fetch('/api/fonts')).json();
+  const state = structuredClone(saved);
+  const cards = new Map();
+
+  function measure(family) {
+    const ctx = document.createElement('canvas').getContext('2d');
+    const width = (font, text) => { ctx.font = font; return ctx.measureText(text).width; };
+    // A glyph the font lacks falls back exactly as plain monospace would.
+    const lacks = (text) => width(`100px "${family}", monospace`, text) === width('100px monospace', text);
+    const noMongolian = lacks(MONGOL);
+    const probe = NIRUGU.repeat(5);
+    if (lacks(probe)) return { formula: null, noMongolian };
+    ctx.font = `100px "${family}"`;
+    const t = ctx.measureText(probe);
+    const lineMiddle = (t.fontBoundingBoxAscent - t.fontBoundingBoxDescent) / 2;
+    const spineMiddle = (t.actualBoundingBoxAscent - t.actualBoundingBoxDescent) / 2;
+    return { formula: (spineMiddle - lineMiddle) / 100, noMongolian };
+  }
+
+  let saveTimer;
+  function save() {
+    clearTimeout(saveTimer);
+    $('#status').textContent = 'saving…';
+    saveTimer = setTimeout(async () => {
+      const r = await fetch('/api/save', { method: 'POST', body: JSON.stringify(state) });
+      updateStatus(r.ok ? 'saved' : 'SAVE FAILED');
+    }, 400);
+  }
+
+  function updateStatus(note = '') {
+    const done = Object.values(state).filter((e) => e.status === 'ok').length;
+    $('#status').textContent = `${done} ok / ${fonts.length} fonts${note ? ` · ${note}` : ''}`;
+  }
+
+  function setValue(font, card, value, { persist = true } = {}) {
+    const s = Math.round(value * 1000) / 1000;
+    card.style.setProperty('--s', s);
+    $('input[type=range]', card).value = s;
+    $('input[type=number]', card).value = s.toFixed(3);
+    const f = card._formula;
+    if (f !== null && f !== undefined) {
+      $('.formula', card).style.left = `calc(50% + ${(f - s).toFixed(4)} * var(--fs))`;
+    }
+    if (persist) {
+      const e = (state[font.id] ??= {});
+      Object.assign(e, entryBase(font, card), { offsetEm: s, updated: new Date().toISOString().slice(0, 10) });
+      save();
+    }
+  }
+
+  function entryBase(font, card) {
+    return {
+      family: font.family, fullName: font.fullName, postscript: font.postscript,
+      version: font.version, file: font.file,
+      formulaEm: card._formula === null || card._formula === undefined ? null : Math.round(card._formula * 1000) / 1000,
+    };
+  }
+
+  function setStatus(font, card, status) {
+    const e = (state[font.id] ??= { ...entryBase(font, card), offsetEm: Number($('input[type=number]', card).value) || 0 });
+    e.status = e.status === status ? undefined : status;
+    Object.assign(e, entryBase(font, card));
+    card.dataset.status = e.status ?? '';
+    for (const b of card.querySelectorAll('[data-set]')) b.setAttribute('aria-pressed', String(b.dataset.set === e.status));
+    save();
+    applyFilter();
+  }
+
+  function build(font) {
+    const card = document.createElement('section');
+    card.className = 'card';
+    card.tabIndex = 0;
+    card.dataset.status = state[font.id]?.status ?? '';
+    card.innerHTML = `
+      <div><div class="name"></div><div class="meta"></div><div class="warn"></div></div>
+      <div class="stage"><div class="center"></div><div class="formula" hidden></div><div class="col" lang="mn-Mong"></div></div>
+      <div class="preview">
+        <div class="chip"><div class="dot"></div><div class="word" lang="mn-Mong"></div></div>
+        <div class="chip big"><div class="dot"></div><div class="word" lang="mn-Mong"></div></div>
+      </div>
+      <div class="controls"><input type="range" min="-0.8" max="0.8" step="0.002"><input type="number" step="0.002"></div>
+      <div class="buttons">
+        <button type="button" data-set="ok">ok</button>
+        <button type="button" data-set="odd">odd</button>
+        <button type="button" data-set="skip">skip</button>
+        <button type="button" data-act="formula">= formula</button>
+        <button type="button" data-act="zero">0</button>
+      </div>`;
+    $('.name', card).textContent = font.fullName;
+    $('.meta', card).textContent = [font.version && `v${font.version}`, font.file].filter(Boolean).join(' · ');
+    const family = `f-${font.id}`;
+    for (const el of card.querySelectorAll('.col, .word')) el.style.fontFamily = `"${family}"`;
+    for (const b of card.querySelectorAll('[data-set]')) b.setAttribute('aria-pressed', String(b.dataset.set === state[font.id]?.status));
+    card.style.setProperty('--s', state[font.id]?.offsetEm ?? 0);
+
+    $('input[type=range]', card).addEventListener('input', (e) => setValue(font, card, Number(e.target.value)));
+    $('input[type=number]', card).addEventListener('change', (e) => setValue(font, card, Number(e.target.value)));
+    card.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.set) setStatus(font, card, b.dataset.set);
+      if (b.dataset.act === 'formula' && card._formula != null) setValue(font, card, card._formula);
+      if (b.dataset.act === 'zero') setValue(font, card, 0);
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.target.matches('input')) return;
+      const now = Number($('input[type=number]', card).value) || 0;
+      const step = e.shiftKey ? 0.01 : 0.002;
+      // The text moves opposite to the value, so → nudges the text right.
+      if (e.key === 'ArrowRight') setValue(font, card, now - step);
+      else if (e.key === 'ArrowLeft') setValue(font, card, now + step);
+      else if (e.key === 'Enter') setStatus(font, card, 'ok');
+      else if (e.key === 'f' && card._formula != null) setValue(font, card, card._formula);
+      else if (e.key === 's') setStatus(font, card, 'skip');
+      else return;
+      e.preventDefault();
+    });
+
+    cards.set(font.id, { font, card, loaded: false });
+    grid.append(card);
+    return card;
+  }
+
+  async function load(id) {
+    const c = cards.get(id);
+    if (c.loaded) return;
+    c.loaded = true;
+    const { font, card } = c;
+    try {
+      const face = new FontFace(`f-${id}`, `url(/font/${id})`);
+      document.fonts.add(await face.load());
+    } catch (err) {
+      $('.warn', card).textContent = `failed to load: ${err.message}`;
+      return;
+    }
+    const { formula, noMongolian } = measure(`f-${id}`);
+    card._formula = formula;
+    const warns = [];
+    if (noMongolian) warns.push('no Mongolian letters: falls back');
+    if (formula === null) warns.push('no nirugu (U+180A): no formula');
+    $('.warn', card).textContent = warns.join(' · ');
+    $('.formula', card).hidden = formula === null;
+    const savedEntry = state[id];
+    setValue(font, card, savedEntry?.offsetEm ?? formula ?? 0, { persist: false });
+  }
+
+  function applySample() {
+    const text = $('#sample').value.trim() || DEFAULT_SAMPLE;
+    for (const { card } of cards.values()) {
+      $('.col', card).textContent = text;
+      for (const w of card.querySelectorAll('.word')) w.textContent = MONGOL;
+    }
+  }
+
+  function applyFilter() {
+    const q = $('#find').value.trim().toLowerCase();
+    const show = $('#show').value;
+    for (const { font, card } of cards.values()) {
+      const st = state[font.id]?.status;
+      const okShow = show === 'all' || (show === 'todo' ? !st : st === show);
+      const okFind = !q || `${font.fullName} ${font.file} ${font.family}`.toLowerCase().includes(q);
+      card.hidden = !(okShow && okFind);
+    }
+  }
+
+  for (const font of fonts) build(font);
+  applySample();
+  applyFilter();
+  updateStatus();
+
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) load(e.target.dataset.id);
+  }, { rootMargin: '600px' });
+  for (const [id, { card }] of cards) { card.dataset.id = id; io.observe(card); }
+
+  $('#size').addEventListener('input', (e) => document.documentElement.style.setProperty('--fs', `${e.target.value}px`));
+  $('#sample').addEventListener('input', applySample);
+  $('#find').addEventListener('input', applyFilter);
+  $('#show').addEventListener('change', applyFilter);
+  $('#copy').addEventListener('click', async () => {
+    await navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+    updateStatus('copied');
+  });
+</script>
+</body>
+</html>
