@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 — 2026-11-24
 
 - `--vui-font-mongolian` defaults to `sans-serif`; set it to your font. The
   spec no longer names specific fonts.

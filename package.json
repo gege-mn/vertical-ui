@@ -1,6 +1,6 @@
 {
   "name": "@gege-mn/vertical-ui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A spec, CSS and web components for vertical-text user interfaces, starting with traditional Mongolian script (Mongol bichig): spine alignment, upright and sideways runs, column sizing and sideways scrolling.",
   "type": "module",
   "license": "MIT",
