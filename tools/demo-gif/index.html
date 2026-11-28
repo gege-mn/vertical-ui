@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Spine-centred buttons</title>
+<link rel="stylesheet" href="/css/vertical-ui.css">
+<style>
+  @font-face { font-family: 'demo-a'; src: url('/font/0'); }
+  @font-face { font-family: 'demo-b'; src: url('/font/1'); }
+  @font-face { font-family: 'demo-c'; src: url('/font/2'); }
+
+  :root {
+    --t: 0;
+    --bg: #f5f6f8;
+    --ink: #16181d;
+    --muted: #6b7280;
+    --line: #d4d8de;
+    --guide: #e5484d;
+  }
+  html, body { margin: 0; background: var(--bg); }
+  body {
+    width: 720px;
+    height: 360px;
+    box-sizing: border-box;
+    padding: 28px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    font-family: system-ui, sans-serif;
+    color: var(--ink);
+  }
+
+  .state { position: relative; height: 26px; width: 100%; }
+  .state span {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+  }
+  .state b { font-weight: 600; }
+  .state code { font: 15px ui-monospace, monospace; color: var(--muted); }
+  .before { opacity: calc(1 - var(--t)); }
+  .after { opacity: var(--t); }
+
+  .row { display: flex; gap: 96px; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+  .button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 236px;
+    box-sizing: border-box;
+    border: 1.5px solid var(--line);
+    border-radius: 42px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  }
+  .button .label {
+    font-size: 40px;
+    line-height: 1.2;
+    translate: calc(-1 * var(--vui-spine) * var(--t)) 0;
+  }
+  /* The box's middle, drawn past both ends so it stays visible across the ink. */
+  .button::after {
+    content: '';
+    position: absolute;
+    top: -14px;
+    bottom: -14px;
+    left: 50%;
+    border-left: 1.5px dashed var(--guide);
+    translate: -50% 0;
+    opacity: 0.85;
+  }
+  .offset { font: 14px ui-monospace, monospace; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="state">
+    <span class="before"><b>Before</b> <code>label centred by its line box</code></span>
+    <span class="after"><b>After</b> <code>.vui-spine-centered</code></span>
+  </div>
+  <div class="row"></div>
+<script type="module">
+  import { applySpine } from '/dist/index.js';
+
+  // qadaγalaqu, "save"
+  const WORD = 'ᠬᠠᠳᠠᠭᠠᠯᠠᠬᠤ';
+  const row = document.querySelector('.row');
+
+  const cells = ['demo-a', 'demo-b', 'demo-c'].map((family) => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.innerHTML = '<div class="button"><span class="label vui-mongolian"></span></div><div class="offset"></div>';
+    const label = cell.querySelector('.label');
+    label.textContent = WORD;
+    label.style.fontFamily = family;
+    row.append(cell);
+    return { cell, label, family };
+  });
+
+  window.ready = (async () => {
+    await document.fonts.ready;
+    for (const { cell, label, family } of cells) {
+      const offset = await applySpine(label, family);
+      if (offset === null) throw new Error(`${family}: no nirugu, pass a font that has one`);
+      const sign = offset < 0 ? '−' : '+';
+      cell.querySelector('.offset').textContent = `spine ${sign}${Math.abs(offset).toFixed(2)}em`;
+    }
+  })();
+
+  window.setT = (t) => {
+    document.documentElement.style.setProperty('--t', String(t));
+    return new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+  };
+</script>
+</body>
+</html>

@@ -8,6 +8,13 @@ right. Most web layout assumes neither. This project writes down the rules
 that keep vertical interfaces aligned and readable, in a form people and code
 agents can both apply, and ships the small amount of code the rules need.
 
+<img src="docs/media/spine-centred.gif" width="720" alt="Three vertical Mongolian buttons, each in a different font, with a dashed line down each button's middle. Centred by their line box, the labels sit off the line by a different amount in each font. With .vui-spine-centered, each label's stem moves onto the line.">
+
+The same button in three fonts. Centring the label's line box leaves its stem
+off the middle by a different amount in each font; `.vui-spine-centered`
+shifts it by the spine offset `applySpine()` measured. See
+[spec/spine.md](spec/spine.md).
+
 - **[spec/](spec/README.md)**: one page per problem, each with rules, minimal
   code, a geometry test and a browser status.
 - **`@gege-mn/vertical-ui`**: CSS plus two framework-free web components, in
@@ -21,7 +28,7 @@ untested. See [ROADMAP.md](ROADMAP.md).
 ## Install
 
 ```sh
-npm install @gege-mn/vertical-ui
+pnpm add @gege-mn/vertical-ui
 ```
 
 ## Use
