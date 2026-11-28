@@ -56,9 +56,9 @@
     "test": "vitest run",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "lock": "bunx pnpm@10 install --lockfile-only",
-    "tune": "bun tools/spine-tuner/serve.ts",
-    "try-in": "bun scripts/try-in.ts",
+    "lock": "pnpm install --lockfile-only",
+    "tune": "node tools/spine-tuner/serve.ts",
+    "try-in": "node scripts/try-in.ts",
     "prepublishOnly": "tsc -p tsconfig.build.json && tsc -p tsconfig.json && vitest run"
   },
   "publishConfig": {

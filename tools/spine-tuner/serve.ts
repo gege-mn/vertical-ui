@@ -1,18 +1,19 @@
 // Local-only tool: serves fonts from this machine to the tuning page and saves the results.
-// Usage: bun tools/spine-tuner/serve.ts [font files or folders…]
+// Usage: node tools/spine-tuner/serve.ts [font files or folders…]
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
 import { homedir } from 'node:os';
 import { basename, extname, join, resolve } from 'node:path';
 
-const ROOT = resolve(import.meta.dir, '../..');
+const ROOT = resolve(import.meta.dirname, '../..');
 const OUT = join(ROOT, 'data/spine-offsets.json');
 const HOME = homedir();
 // In shared system font folders, only files whose names look Mongolian are taken.
 const MONGOLIAN_NAME = /mongol|bichig/i;
 const SHARED_FOLDER = /\/Library\/Fonts|\/fonts$/i;
 // One path per line, kept out of git because it describes this machine.
-const SOURCES_FILE = join(import.meta.dir, 'sources.local.txt');
+const SOURCES_FILE = join(import.meta.dirname, 'sources.local.txt');
 
 interface FontEntry {
   id: string;
@@ -133,43 +134,57 @@ const TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
-const server = Bun.serve({
-  port: Number(process.env.PORT ?? 5177),
-  hostname: '127.0.0.1',
-  async fetch(req) {
-    const url = new URL(req.url);
+const PORT = Number(process.env.PORT ?? 5177);
+const HOSTNAME = '127.0.0.1';
+
+createServer(async (req, res) => {
+  const reply = (status: number, body: string | Buffer, type = 'text/plain;charset=utf-8') => {
+    res.writeHead(status, { 'content-type': type });
+    res.end(body);
+  };
+  const json = (data: unknown) => reply(200, JSON.stringify(data), 'application/json');
+  try {
+    const url = new URL(req.url ?? '/', `http://${HOSTNAME}`);
     // Loopback alone doesn't stop other sites: DNS rebinding reaches it with a foreign Host,
     // and a page's no-cors POST arrives with a foreign Origin.
-    const host = req.headers.get('host') ?? '';
-    const origin = req.headers.get('origin');
-    if (!/^(127\.0\.0\.1|localhost):\d+$/.test(host))
-      return new Response('forbidden', { status: 403 });
-    if (origin !== null && origin !== `http://${host}`)
-      return new Response('forbidden', { status: 403 });
-    if (url.pathname === '/') return new Response(Bun.file(join(import.meta.dir, 'index.html')));
+    const host = req.headers.host ?? '';
+    const origin = req.headers.origin;
+    if (!/^(127\.0\.0\.1|localhost):\d+$/.test(host)) return reply(403, 'forbidden');
+    if (origin !== undefined && origin !== `http://${host}`) return reply(403, 'forbidden');
+    if (url.pathname === '/')
+      return reply(
+        200,
+        readFileSync(join(import.meta.dirname, 'index.html')),
+        'text/html;charset=utf-8',
+      );
     if (url.pathname === '/api/fonts') {
       const saved = existsSync(OUT) ? JSON.parse(readFileSync(OUT, 'utf8')) : {};
-      return Response.json({
+      return json({
         fonts: fonts.map(({ path: _path, ...f }) => f),
         saved,
       });
     }
     if (url.pathname.startsWith('/font/')) {
       const font = byId.get(url.pathname.slice(6));
-      if (!font) return new Response('not found', { status: 404 });
-      return new Response(Bun.file(font.path), {
-        headers: {
-          'content-type': TYPES[extname(font.path).toLowerCase()] ?? 'application/octet-stream',
-        },
-      });
+      if (!font) return reply(404, 'not found');
+      return reply(
+        200,
+        readFileSync(font.path),
+        TYPES[extname(font.path).toLowerCase()] ?? 'application/octet-stream',
+      );
     }
     if (url.pathname === '/api/save' && req.method === 'POST') {
-      const data = await req.json();
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(chunk);
+      const data = JSON.parse(Buffer.concat(chunks).toString('utf8'));
       writeFileSync(OUT, `${JSON.stringify(data, null, 2)}\n`);
-      return Response.json({ ok: true, count: Object.keys(data).length });
+      return json({ ok: true, count: Object.keys(data).length });
     }
-    return new Response('not found', { status: 404 });
-  },
+    return reply(404, 'not found');
+  } catch (err) {
+    console.error(err);
+    reply(500, 'internal error');
+  }
+}).listen(PORT, HOSTNAME, () => {
+  console.log(`${fonts.length} fonts — http://${HOSTNAME}:${PORT}/`);
 });
-
-console.log(`${fonts.length} fonts — http://${server.hostname}:${server.port}/`);

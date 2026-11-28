@@ -1,6 +1,5 @@
 node_modules
 dist
-bun.lock
 .DS_Store
 tools/spine-tuner/sources.local.txt
 __pycache__/
